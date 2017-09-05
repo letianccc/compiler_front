@@ -1,0 +1,11 @@
+int i = 1;
+int j = 1;
+while(true){
+    if(i<=5){
+        i = i + j;
+    }
+    else{
+        break;
+    }
+}
+float k = 4.5;
