@@ -1,5 +1,15 @@
-int i = 1;
-int j = 1;
+{
+int x;
+int i;
+int j;
+i = 3;
+j = 1;
+if(i==1 && i < i + 1){
+    i = i + 1;
+}
+else{
+    i = 1;
+}
 while(true){
     if(i<=5){
         i = i + j;
@@ -8,4 +18,6 @@ while(true){
         break;
     }
 }
-float k = 4.5;
+float k;
+k = 4.5;
+}
