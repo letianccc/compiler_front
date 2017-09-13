@@ -15,6 +15,11 @@ class Token:
         self.name = None
         self.value = None
         self.id_type = None
+        self.count = None
+
+    def gen(self, generator):
+        # t = generator.generate(self)
+        return generator.generate(self)
 
     def __str__(self):
         return str(self.value)

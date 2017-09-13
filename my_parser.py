@@ -1,5 +1,6 @@
 from debug import log_list
 from my_lexer import TokenType
+from my_ast import *
 
 class Parser:
     def __init__(self, tokens):
@@ -37,24 +38,20 @@ class Parser:
         return self.block()
 
     def block(self):
-        block_head = None
         if self.match('{'):
-            # self.env.next = Env()
-            # self.env.next.prior = self.env
-            # self.env = self.env.next
+            self.env.next = Env()
+            self.env.next.prior = self.env
+            self.env = self.env.next
 
-            stmt = self.stmt()
+            stmt = SeqStmt()
+            stmt.left = self.stmt()
             block_head = stmt
             while not self.match('}'):
-                # print("dd")
-                # self.log_tok()
-                seq_stmt = SeqStmt()
-                seq_stmt.left = stmt
-                seq_stmt.right = self.stmt()
+                stmt.right = SeqStmt()
+                seq_stmt = stmt.right
+                seq_stmt.left = self.stmt()
                 stmt = seq_stmt
-
-
-            # self.env = self.env.prior
+            self.env = self.env.prior
 
         else:
             block_head = self.stmt()
@@ -62,7 +59,8 @@ class Parser:
         return block_head
 
     def stmt(self):
-        value = self.cur_tok().value
+        t = self.cur_tok()
+        value = t.value
 
         if value == "int" or value == "float":
             stmt = self.decl_stmt(value)
@@ -72,18 +70,20 @@ class Parser:
             stmt = self.if_stmt()
 
         else:
-            stmt = self.alloc_stmt(value)
+            variable = self.check_decl(value)
+            # variable = self.variable_t(value)
+            stmt = self.alloc_stmt(variable)
             self.check_semicolon()
 
         return stmt
 
     def decl_stmt(self, type):
-        identifier = self.cur_tok()
-        assert identifier.type == TokenType.Identifier
-        identifier.id_type = type
-        self.env.save.append(identifier)
+        variable_t = self.cur_tok()
+        assert variable_t.type == TokenType.Identifier
+        variable_t.id_type = type
+        self.env.save[variable_t.name] = variable_t
 
-        return DeclStmt(type, identifier.name)
+        return DeclStmt(variable_t)
 
     def if_stmt(self):
         self.match('(')
@@ -100,20 +100,34 @@ class Parser:
 
         return stmt
 
-    def alloc_stmt(self, value):
-        id = value
-        # if id in self.env.save.keys():
-        #     self.log_tok()
+    def alloc_stmt(self, variable):
         if self.match('='):
-            value = self.expr()
-            # self.env.save[id] = value
+            # variable_t = self.variable_t(variable)
+
+            # value = self.expr()
+            # variable_t.value = value
             stmt = AllocStmt()
-            stmt.variable = id
-            stmt.value = value
+            stmt.variable = variable
+            stmt.value = self.expr()
 
             return stmt
         else:
-            raise Exception("allocate stmt error", id)
+            raise Exception("allocate stmt error", variable)
+
+    def check_decl(self, variable):
+        e = self.env
+        while e:
+            for variable_name, variable_tok in e.save.items():
+                if variable == variable_name:
+                    return variable_tok
+            e = e.prior
+        raise Exception(variable + " is not in env")
+
+    def check_alloc(self, variable):
+        t = self.check_decl(variable)
+        if not t.value:
+            raise Exception(variable + " is not allocated")
+        return t
 
     def check_semicolon(self):
         if not self.match(';'):
@@ -216,104 +230,20 @@ class Parser:
             factor_expr.expression = self.expr()
             self.match(')')
         else:
-            factor_expr.expression = self.cur_tok()
+            t = self.cur_tok()
+            if t.type == TokenType.Identifier:
+                identifier = self.check_alloc(t.name)
+                # variable_t = self.variable_t(t.name)
+                factor_expr.expression = identifier
+                return factor_expr
+            else:
+                factor_expr.expression = t
 
         return factor_expr
 
 
 class Env:
     def __init__(self):
-        self.save = list()
+        self.save = dict()
         self.next = None
         self.prior = None
-
-
-class Stmt:
-    pass
-
-
-class SeqStmt(Stmt):
-    def __init__(self):
-        self.left = None
-        self.right = None
-
-
-class DeclStmt(Stmt):
-    def __init__(self, type, identifier):
-        self.type = type
-        self.identifier = identifier
-
-
-class AllocStmt(Stmt):
-    def __init__(self):
-        self.variable = None
-        self.value = None
-
-
-class IfStmt(Stmt):
-    def __init__(self):
-        self.cond = None
-        self.block = None
-
-
-class ElseStmt(Stmt):
-    def __init__(self):
-        self.cond = None
-        self.if_block = None
-        self.else_block = None
-
-
-class Expression:
-    pass
-
-
-class OrExpr(Expression):
-    def __init__(self):
-        self.left = None
-        self.right = None
-
-
-class AndExpr(Expression):
-    def __init__(self):
-        self.left = None
-        self.right = None
-
-
-class EqualExpr(Expression):
-    def __init__(self):
-        self.left = None
-        self.right = None
-        self.op = None
-
-
-class RelExpr(Expression):
-    def __init__(self):
-        self.left = None
-        self.right = None
-        self.rel = None
-
-
-class LowTermExpr(Expression):
-    def __init__(self):
-        self.left = None
-        self.right = None
-        self.op = None
-
-
-class UpTermExpr(Expression):
-    def __init__(self):
-        self.left = None
-        self.right = None
-        self.op = None
-
-
-class UnaryEpxr(Expression):
-    def __init__(self):
-        self.prefix = None
-        self.expression = None
-
-
-class FactorExpr(Expression):
-    def __init__(self):
-        self.expression = None
-
