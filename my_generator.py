@@ -4,6 +4,7 @@ from my_lexer import Token
 
 class Generator:
     count = 0
+    line = 0
 
     def generate(self, tree):
         func = {SeqStmt: self.seq_gen,
